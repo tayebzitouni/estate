@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "https://yourapp.lovable.app/$1"
+    }
+  ]
+}
