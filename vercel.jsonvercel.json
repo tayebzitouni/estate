@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "https://fikratech.lovable.app"
+      "destination": "https://fikratech.lovable.app/$1"
     }
   ]
 }
