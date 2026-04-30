@@ -17,7 +17,24 @@ export async function POST(request: NextRequest) {
   const passwordHash = hashPassword(parsed.data.password);
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (existing) return toApiError("Email already exists", 409);
+  if (existing) {
+    if (!existing.emailVerifiedAt) {
+      const token = await createEmailVerificationToken({
+        userId: existing.id,
+        email: existing.email,
+        type: "REGISTRATION"
+      });
+      await sendVerificationEmail(existing.email, token);
+
+      return Response.json({
+        email: existing.email,
+        emailVerifiedAt: existing.emailVerifiedAt,
+        message: "This email is already registered but not verified. We sent a new verification link."
+      });
+    }
+
+    return toApiError("Email already exists", 409);
+  }
 
   const user = await prisma.user.create({
     data: {
