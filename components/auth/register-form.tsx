@@ -30,10 +30,16 @@ export function RegisterForm({ locale }: { locale: string }) {
         body: JSON.stringify({ name, email, password, role: "TENANT" })
       });
 
-      const payload = await response.json();
+      const contentType = response.headers.get("content-type") ?? "";
+      const payload = contentType.includes("application/json") ? await response.json() : {};
 
       if (!response.ok) {
         setError(payload.error ?? "Unable to create your account.");
+        return;
+      }
+
+      if (!payload.role) {
+        setError(payload.message ?? "Account created. Please verify your email address, then login.");
         return;
       }
 

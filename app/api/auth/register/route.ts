@@ -16,9 +16,19 @@ export async function POST(request: NextRequest) {
   const normalizedEmail = parsed.data.email.toLowerCase();
   const passwordHash = hashPassword(parsed.data.password);
 
-  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  const existing = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    include: { profile: true }
+  });
   if (existing) {
     if (!existing.emailVerifiedAt) {
+      setSession({
+        userId: existing.id,
+        role: existing.role,
+        email: existing.email,
+        name: existing.profile?.fullName ?? existing.email
+      });
+
       const token = await createEmailVerificationToken({
         userId: existing.id,
         email: existing.email,
@@ -27,7 +37,10 @@ export async function POST(request: NextRequest) {
       await sendVerificationEmail(existing.email, token);
 
       return Response.json({
+        id: existing.id,
         email: existing.email,
+        role: existing.role,
+        name: existing.profile?.fullName,
         emailVerifiedAt: existing.emailVerifiedAt,
         message: "This email is already registered but not verified. We sent a new verification link."
       });
