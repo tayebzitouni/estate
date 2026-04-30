@@ -29,12 +29,17 @@ export async function POST(request: NextRequest) {
         name: existing.profile?.fullName ?? existing.email
       });
 
-      const token = await createEmailVerificationToken({
-        userId: existing.id,
-        email: existing.email,
-        type: "REGISTRATION"
-      });
-      await sendVerificationEmail(existing.email, token);
+      try {
+        const token = await createEmailVerificationToken({
+          userId: existing.id,
+          email: existing.email,
+          type: "REGISTRATION"
+        });
+        await sendVerificationEmail(existing.email, token);
+      } catch (error) {
+        console.error("Unable to resend verification email", error);
+        return toApiError("Unable to send verification email. Please try again later.", 502);
+      }
 
       return Response.json({
         id: existing.id,
@@ -77,12 +82,18 @@ export async function POST(request: NextRequest) {
     name: user.profile?.fullName ?? user.email
   });
 
-  const token = await createEmailVerificationToken({
-    userId: user.id,
-    email: user.email,
-    type: "REGISTRATION"
-  });
-  await sendVerificationEmail(user.email, token);
+  try {
+    const token = await createEmailVerificationToken({
+      userId: user.id,
+      email: user.email,
+      type: "REGISTRATION"
+    });
+    await sendVerificationEmail(user.email, token);
+  } catch (error) {
+    console.error("Unable to send verification email", error);
+    await prisma.user.delete({ where: { id: user.id } });
+    return toApiError("Unable to send verification email. Please try again later.", 502);
+  }
 
   return Response.json(
     {

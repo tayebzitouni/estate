@@ -58,11 +58,11 @@ export async function sendVerificationEmail(email: string, token: string) {
       })
     });
 
-    if (response.ok) {
-      return;
+    if (!response.ok) {
+      throw new Error(`Resend email failed: ${await response.text()}`);
     }
 
-    console.error("Resend email failed", await response.text());
+    return;
   }
 
   const outboxDir = process.env.VERCEL ? os.tmpdir() : path.join(process.cwd(), ".temp");
