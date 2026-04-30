@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { mkdir, appendFile } from "fs/promises";
+import os from "os";
 import path from "path";
 
 import { prisma } from "@/lib/prisma";
@@ -64,11 +65,15 @@ export async function sendVerificationEmail(email: string, token: string) {
     console.error("Resend email failed", await response.text());
   }
 
-  const outboxDir = path.join(process.cwd(), ".temp");
+  const outboxDir = process.env.VERCEL ? os.tmpdir() : path.join(process.cwd(), ".temp");
   const outboxFile = path.join(outboxDir, "email-outbox.log");
 
-  await mkdir(outboxDir, { recursive: true });
-  await appendFile(outboxFile, `[${new Date().toISOString()}] To: ${email}\n${verificationUrl}\n\n`, "utf8");
+  try {
+    await mkdir(outboxDir, { recursive: true });
+    await appendFile(outboxFile, `[${new Date().toISOString()}] To: ${email}\n${verificationUrl}\n\n`, "utf8");
+  } catch (error) {
+    console.error("Unable to write verification outbox", error);
+  }
 
   console.log(`Verification email for ${email}: ${verificationUrl}`);
 }
