@@ -300,6 +300,9 @@ model ViewingAppointment {
   managerId       String?
   requestedAt     DateTime
   note            String?
+  meetingOutcome  String?
+  meetingNotes    String?
+  followUpAt      DateTime?
   status          AppointmentStatus @default(REQUESTED)
   createdAt       DateTime          @default(now())
   listing         Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)

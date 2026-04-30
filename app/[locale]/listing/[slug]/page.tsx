@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarRange, Flag, MapPin, ShieldCheck, Star, UserRound } from "lucide-react";
+import { CalendarRange, Clock3, Flag, MapPin, ShieldCheck, Sparkles, Star, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContactRequestForm } from "@/components/listings/contact-request-form";
 import { FavoriteButton } from "@/components/listings/favorite-button";
+import { StartMessageButton } from "@/components/messages/start-message-button";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { TicketForm } from "@/components/tickets/ticket-form";
 import { getListingBySlug } from "@/lib/data";
@@ -136,43 +137,80 @@ export default async function ListingDetailsPage({
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardContent className="space-y-5 p-6">
-              <div className="text-3xl font-semibold text-brand-navy">
-                {formatDzd(listing.priceDzd, params.locale === "fr" ? "fr-DZ" : "ar-DZ")}
-              </div>
-              <div className="rounded-2xl bg-brand-gray p-4 text-sm text-slate-600">
-                Listing completeness, admin review, and profile verification are shown before contact.
-              </div>
-              <div className="space-y-2 text-sm text-slate-600">
-                <div>Contact: {contactName}</div>
-                <div className="flex items-center gap-2">
-                  <Star className="h-4 w-4 fill-current text-amber-500" />
-                  Proprietor rating: {ownerAverage ? `${ownerAverage.toFixed(1)}/5` : "No reviews yet"}
+          <Card className="sticky top-28 overflow-hidden border-0 bg-white shadow-[0_24px_70px_rgba(13,27,42,0.16)]">
+            <div className="bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.32),transparent_35%),linear-gradient(135deg,#0D1B2A,#13283D)] p-6 text-white">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Verified visit desk
+                  </div>
+                  <div className="mt-3 text-3xl font-semibold">
+                    {formatDzd(listing.priceDzd, params.locale === "fr" ? "fr-DZ" : "ar-DZ")}
+                  </div>
                 </div>
-                <div>Response time: {listing.owner?.profile?.responseTimeMins ?? 120} min</div>
+                {listing.verificationStatus === "APPROVED" ? (
+                  <div className="rounded-full bg-white/15 px-3 py-2 text-xs font-semibold backdrop-blur">
+                    Admin checked
+                  </div>
+                ) : null}
               </div>
-              <Button className="w-full" variant="secondary" asChild>
-                <Link href={`/${params.locale}/profiles/${contactUser.id}`}>
-                  <UserRound className="me-2 h-4 w-4" />
-                  View proprietor profile
-                </Link>
-              </Button>
-              <Button className="w-full" variant="accent" asChild>
-                <Link href={`/${params.locale}/book-viewing/${listing.id}`}>
-                  <CalendarRange className="me-2 h-4 w-4" />
-                  Book a viewing
-                </Link>
-              </Button>
-              <Button className="w-full" variant="outline" asChild>
-                <Link href={`/${params.locale}/messages?listingId=${listing.id}`}>Message owner or agent</Link>
-              </Button>
-              <ContactRequestForm listingId={listing.id} />
-              <FavoriteButton listingId={listing.id} />
-              <div className="rounded-3xl border border-rose-100 bg-rose-50 p-4">
-                <div className="mb-3 flex items-center gap-2 font-semibold text-rose-700">
+            </div>
+
+            <CardContent className="space-y-5 p-5">
+              <div className="rounded-[2rem] border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-navy text-lg font-semibold text-white">
+                    {contactName.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold text-brand-navy">{contactName}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
+                        {ownerAverage ? `${ownerAverage.toFixed(1)}/5 rating` : "No reviews yet"}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="h-3.5 w-3.5 text-brand-emerald" />
+                        {listing.owner?.profile?.responseTimeMins ?? 120} min reply
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button className="mt-4 w-full justify-between rounded-2xl bg-white shadow-sm hover:bg-slate-100" variant="ghost" asChild>
+                  <Link href={`/${params.locale}/profiles/${contactUser.id}`}>
+                    <span className="flex items-center gap-2">
+                      <UserRound className="h-4 w-4 text-brand-emerald" />
+                      View full proprietor profile
+                    </span>
+                    <span className="text-slate-400">Open</span>
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="grid gap-3">
+                <Button className="h-14 w-full justify-between rounded-2xl bg-brand-emerald px-5 text-base shadow-[0_14px_30px_rgba(16,185,129,0.28)] hover:bg-brand-emerald/90" variant="accent" asChild>
+                  <Link href={`/${params.locale}/book-viewing/${listing.id}`}>
+                    <span className="flex items-center gap-2">
+                      <CalendarRange className="h-5 w-5" />
+                      Book a viewing
+                    </span>
+                    <span className="text-sm text-white/80">Calendar</span>
+                  </Link>
+                </Button>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <StartMessageButton className="h-12 w-full justify-between rounded-2xl border-slate-200 bg-white px-4 text-brand-navy shadow-sm hover:bg-slate-50" listingId={listing.id} locale={params.locale} />
+                  <FavoriteButton listingId={listing.id} />
+                </div>
+
+                <ContactRequestForm listingId={listing.id} />
+              </div>
+
+              <div className="rounded-[2rem] border border-rose-100 bg-gradient-to-br from-rose-50 to-white p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-rose-700">
                   <Flag className="h-4 w-4" />
-                  Complaint to admin
+                  Something wrong?
                 </div>
                 <TicketForm listingId={listing.id} targetUserId={contactUser?.id} />
               </div>

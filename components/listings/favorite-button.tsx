@@ -23,9 +23,12 @@ export function FavoriteButton({ listingId }: { listingId: string }) {
 
   return (
     <div className="space-y-2">
-      <Button className="w-full" variant="outline" disabled={isLoading} onClick={save}>
-        <Heart className="me-2 h-4 w-4" />
-        Save apartment
+      <Button className="w-full justify-between border-slate-200 bg-white text-brand-navy hover:bg-slate-50" variant="outline" disabled={isLoading} onClick={save}>
+        <span className="flex items-center gap-2">
+          <Heart className="h-4 w-4 text-rose-500" />
+          Save apartment
+        </span>
+        <span className="text-xs text-slate-400">{isLoading ? "..." : "Later"}</span>
       </Button>
       {message ? <div className="text-sm text-slate-500">{message}</div> : null}
     </div>

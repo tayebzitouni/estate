@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { CalendarDays, Clock3 } from "lucide-react";
 
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
@@ -67,10 +68,10 @@ export default async function AppointmentsPage({ params }: { params: { locale: s
                     <div className="mt-1 text-lg font-semibold text-brand-navy">{day.getDate()}</div>
                     <div className="mt-3 grid gap-2">
                       {dayAppointments.map((appointment) => (
-                        <div key={appointment.id} className="rounded-xl bg-white p-2 text-xs text-slate-600 shadow-sm">
+                        <Link key={appointment.id} href={`/${params.locale}/dashboard/appointments/${appointment.id}`} className="block rounded-xl bg-white p-2 text-xs text-slate-600 shadow-sm hover:bg-emerald-50">
                           <div className="font-medium text-brand-navy">{appointment.listing.title}</div>
                           <div>{new Date(appointment.requestedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>
@@ -105,13 +106,16 @@ export default async function AppointmentsPage({ params }: { params: { locale: s
             <CardContent className="space-y-4 p-5">
               <h2 className="text-xl font-semibold text-brand-navy">All appointments</h2>
               {appointments.map((appointment) => (
-                <div key={appointment.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4">
+                <Link key={appointment.id} href={`/${params.locale}/dashboard/appointments/${appointment.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 hover:bg-slate-50">
                   <div>
                     <div className="font-medium text-brand-navy">{appointment.listing.title}</div>
                     <div className="text-sm text-slate-500">{appointment.requestedAt.toLocaleString()}</div>
+                    {appointment.status === "CONFIRMED" && !appointment.followUpAt ? (
+                      <div className="mt-1 text-xs text-amber-600">Click after the visit to add meeting details.</div>
+                    ) : null}
                   </div>
                   <Badge variant={statusVariant(appointment.status)}>{appointment.status}</Badge>
-                </div>
+                </Link>
               ))}
               {appointments.length === 0 ? <div className="text-sm text-slate-500">No appointments yet.</div> : null}
             </CardContent>

@@ -50,6 +50,43 @@ export async function GET() {
     }
   }
 
+  const overdueStart = new Date();
+  overdueStart.setHours(overdueStart.getHours() - 24);
+
+  const overdueFollowUps = await prisma.viewingAppointment.findMany({
+    where: {
+      status: "CONFIRMED",
+      followUpAt: null,
+      requestedAt: { lt: overdueStart },
+      OR: [
+        { requesterId: session.userId },
+        { listing: { OR: [{ ownerId: session.userId }, { agentId: session.userId }] } }
+      ]
+    },
+    include: { listing: true }
+  });
+
+  for (const appointment of overdueFollowUps) {
+    const existing = await prisma.notification.findFirst({
+      where: {
+        userId: session.userId,
+        type: "MEETING_FOLLOW_UP_OVERDUE",
+        body: { contains: appointment.id }
+      }
+    });
+
+    if (!existing) {
+      await prisma.notification.create({
+        data: {
+          userId: session.userId,
+          type: "MEETING_FOLLOW_UP_OVERDUE",
+          title: "Meeting follow-up required",
+          body: `The viewing for ${appointment.listing.title} passed more than 24 hours ago. Please add what happened. Ref: ${appointment.id}`
+        }
+      });
+    }
+  }
+
   const notifications = await prisma.notification.findMany({
     where: { userId: session.userId },
     orderBy: { createdAt: "desc" }

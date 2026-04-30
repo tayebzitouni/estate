@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { getCurrentSession } from "@/lib/auth";
 import { toApiError } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
-import { appointmentSchema } from "@/lib/validations";
+import { appointmentFollowUpSchema, appointmentSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -60,8 +60,8 @@ export async function PATCH(request: NextRequest) {
   if (!session) return toApiError("Unauthorized", 401);
 
   const body = await request.json();
-  if (!body.id || !["CONFIRMED", "CANCELLED"].includes(body.status)) {
-    return toApiError("Appointment id and CONFIRMED or CANCELLED status are required.");
+  if (!body.id) {
+    return toApiError("Appointment id is required.");
   }
 
   const appointment = await prisma.viewingAppointment.findUnique({
@@ -69,6 +69,49 @@ export async function PATCH(request: NextRequest) {
     include: { listing: true, requester: true }
   });
   if (!appointment) return toApiError("Appointment not found", 404);
+  const canManage =
+    session.role === "ADMIN" ||
+    appointment.requesterId === session.userId ||
+    appointment.listing.ownerId === session.userId ||
+    appointment.listing.agentId === session.userId;
+
+  if (!canManage) return toApiError("Forbidden", 403);
+
+  if (body.meetingOutcome || body.meetingNotes) {
+    if (appointment.status !== "CONFIRMED" && appointment.status !== "COMPLETED") {
+      return toApiError("Only confirmed meetings can receive details.");
+    }
+    const parsed = appointmentFollowUpSchema.safeParse(body);
+    if (!parsed.success) return toApiError(parsed.error.flatten().formErrors.join(", ") || "Invalid meeting details.");
+
+    const updated = await prisma.viewingAppointment.update({
+      where: { id: parsed.data.id },
+      data: {
+        status: "COMPLETED",
+        meetingOutcome: parsed.data.meetingOutcome,
+        meetingNotes: parsed.data.meetingNotes,
+        followUpAt: new Date()
+      },
+      include: { listing: true }
+    });
+
+    const recipients = Array.from(new Set([appointment.requesterId, appointment.listing.ownerId].filter(Boolean)));
+    await prisma.notification.createMany({
+      data: recipients.map((userId) => ({
+        userId,
+        type: "APPOINTMENT_FOLLOW_UP",
+        title: "Meeting details saved",
+        body: `Meeting details were saved for ${appointment.listing.title}. Ref: ${appointment.id}`
+      }))
+    });
+
+    return Response.json(updated);
+  }
+
+  if (!["CONFIRMED", "CANCELLED"].includes(body.status)) {
+    return toApiError("CONFIRMED or CANCELLED status is required.");
+  }
+
   if (
     session.role !== "ADMIN" &&
     appointment.listing.ownerId !== session.userId &&

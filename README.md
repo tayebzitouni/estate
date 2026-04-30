@@ -101,7 +101,47 @@ npm run dev
 
 ## Production Notes
 
-- Replace the custom session layer with a hardened auth provider if you want social login or enterprise SSO.
-- Wire `media-upload` to real presigned S3 URLs.
-- Add database-backed translations and notification jobs for email and in-app delivery.
-- Add migration SQL for PostGIS enablement in the target PostgreSQL environment if needed.
+## Deployment
+
+This project is a full-stack Next.js app. The frontend pages and backend API routes deploy together in one service. PostgreSQL must be hosted separately.
+
+### Required environment variables
+
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+AUTH_SECRET="long-random-secret"
+APP_URL="https://your-domain.com"
+RESEND_API_KEY="optional-for-real-email-verification"
+EMAIL_FROM="Darak <noreply@your-domain.com>"
+```
+
+If `RESEND_API_KEY` is missing, verification links are written to `.temp/email-outbox.log`, which is only useful locally.
+
+### Vercel
+
+1. Create a hosted PostgreSQL database.
+2. Add the environment variables above in Vercel.
+3. Deploy the repository. Vercel uses `npm run vercel-build`.
+4. After the first deploy, run this once from your machine against the production database:
+
+```bash
+npx prisma db push
+```
+
+### Render or Docker hosting
+
+The repo includes `Dockerfile` and `render.yaml`. The Docker startup command runs:
+
+```bash
+npx prisma db push && npm run start
+```
+
+So the production database schema is pushed when the container starts.
+
+### Production notes
+
+- Use a long unique `AUTH_SECRET`; never keep `change-this-secret` in production.
+- Use hosted PostgreSQL, not `localhost`.
+- Configure `APP_URL` to the final live domain so email verification links work.
+- Configure `RESEND_API_KEY` and `EMAIL_FROM` for real email verification.
+- Wire `media-upload` to real S3-compatible storage before storing large user uploads.

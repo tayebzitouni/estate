@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Mail, MessageCircle, Star } from "lucide-react";
+import { Building2, Mail, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReviewForm } from "@/components/reviews/review-form";
+import { StartMessageButton } from "@/components/messages/start-message-button";
 import { TicketForm } from "@/components/tickets/ticket-form";
 import { getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -71,12 +71,7 @@ export default async function PublicProfilePage({
               </div>
             </div>
             {canReview ? (
-              <Button asChild variant="outline" className="w-full">
-                <Link href={`/${params.locale}/messages?participantBId=${user.id}`}>
-                  <MessageCircle className="me-2 h-4 w-4" />
-                  Message this user
-                </Link>
-              </Button>
+              <StartMessageButton participantBId={user.id} locale={params.locale} className="w-full" />
             ) : null}
             <div className="rounded-3xl border border-rose-100 bg-rose-50 p-4">
               <div className="mb-3 flex items-center gap-2 font-semibold text-rose-700">

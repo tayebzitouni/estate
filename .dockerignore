@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+.env
+.temp
+.pglite-data
+.postgres
+.pgapp
+*.log
+coverage
+dist
+tsconfig.tsbuildinfo

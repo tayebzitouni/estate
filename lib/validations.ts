@@ -47,6 +47,12 @@ export const appointmentSchema = z.object({
   note: z.string().max(500).optional()
 });
 
+export const appointmentFollowUpSchema = z.object({
+  id: z.string().cuid().or(z.string().min(3)),
+  meetingOutcome: z.string().min(3).max(80),
+  meetingNotes: z.string().min(10).max(1500)
+});
+
 export const reportSchema = z.object({
   listingId: z.string().cuid().or(z.string().min(3)),
   reason: z.string().min(10),

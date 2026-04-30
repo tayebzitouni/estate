@@ -32,6 +32,38 @@ export async function createEmailVerificationToken(input: {
 export async function sendVerificationEmail(email: string, token: string) {
   const baseUrl = process.env.APP_URL ?? "http://localhost:3000";
   const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
+  const resendApiKey = process.env.RESEND_API_KEY;
+
+  if (resendApiKey) {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM ?? "Darak <noreply@darak.local>",
+        to: email,
+        subject: "Verify your Darak account",
+        html: `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
+            <h1>Verify your Darak account</h1>
+            <p>Click the button below to verify your email address.</p>
+            <p><a href="${verificationUrl}" style="display:inline-block;border-radius:999px;background:#10b981;color:white;padding:12px 18px;text-decoration:none">Verify email</a></p>
+            <p>If the button does not work, copy this link:</p>
+            <p>${verificationUrl}</p>
+          </div>
+        `
+      })
+    });
+
+    if (response.ok) {
+      return;
+    }
+
+    console.error("Resend email failed", await response.text());
+  }
+
   const outboxDir = path.join(process.cwd(), ".temp");
   const outboxFile = path.join(outboxDir, "email-outbox.log");
 
