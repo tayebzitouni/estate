@@ -1,0 +1,68 @@
+import { NextRequest } from "next/server";
+
+import { hashPassword, setSession } from "@/lib/auth";
+import { toApiError } from "@/lib/data";
+import { createEmailVerificationToken, sendVerificationEmail } from "@/lib/email";
+import { prisma } from "@/lib/prisma";
+import { registerSchema } from "@/lib/validations";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const parsed = registerSchema.safeParse(body);
+  if (!parsed.success) return toApiError(parsed.error.flatten().formErrors.join(", "));
+
+  const normalizedEmail = parsed.data.email.toLowerCase();
+  const passwordHash = hashPassword(parsed.data.password);
+
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (existing) return toApiError("Email already exists", 409);
+
+  const user = await prisma.user.create({
+    data: {
+      email: normalizedEmail,
+      passwordHash,
+      role: parsed.data.role,
+      profile: {
+        create: {
+          fullName: parsed.data.name,
+          preferredLang: "ar"
+        }
+      },
+      verificationProfile: {
+        create: {
+          legalName: parsed.data.name,
+          status: "PENDING"
+        }
+      }
+    },
+    include: { profile: true }
+  });
+
+  setSession({
+    userId: user.id,
+    role: user.role,
+    email: user.email,
+    name: user.profile?.fullName ?? user.email
+  });
+
+  const token = await createEmailVerificationToken({
+    userId: user.id,
+    email: user.email,
+    type: "REGISTRATION"
+  });
+  await sendVerificationEmail(user.email, token);
+
+  return Response.json(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.profile?.fullName,
+      emailVerifiedAt: user.emailVerifiedAt,
+      message: "Please verify your email address."
+    },
+    { status: 201 }
+  );
+}

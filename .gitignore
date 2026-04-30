@@ -1,0 +1,13 @@
+.next
+node_modules
+.env
+coverage
+dist
+generated
+*.log
+.pglite-data/
+.postgres/
+.temp/
+.pglite.err
+.pglite.pid
+tsconfig.tsbuildinfo

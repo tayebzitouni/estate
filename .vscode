@@ -1,0 +1,1 @@
+codex mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem /absolute/path/to/your/project /absolute/path/to/another/folder

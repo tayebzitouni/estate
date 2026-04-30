@@ -1,0 +1,442 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  OWNER
+  AGENT
+  PROPERTY_MANAGER
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  RENT
+  SALE
+}
+
+enum PropertyType {
+  APARTMENT
+  VILLA
+  STUDIO
+  HOUSE
+  OFFICE
+  SHOP
+  LAND
+  BUILDING
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  UNPUBLISHED
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReviewTargetType {
+  LISTING
+  USER
+}
+
+enum TicketStatus {
+  OPEN
+  REVIEWING
+  WAITING_FOR_USER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model User {
+  id                   String                 @id @default(cuid())
+  email                String                 @unique
+  pendingEmail         String?
+  emailVerifiedAt      DateTime?
+  passwordHash         String
+  role                 Role
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  profile              Profile?
+  verificationProfile  VerificationProfile?
+  ownedProperties      Property[]             @relation("OwnedProperties")
+  ownedListings        Listing[]              @relation("OwnerListings")
+  agentListings        Listing[]              @relation("AgentListings")
+  savedListings        SavedListing[]
+  savedSearches        SavedSearch[]
+  leads                Lead[]
+  conversationsA       Conversation[]         @relation("ConversationParticipantA")
+  conversationsB       Conversation[]         @relation("ConversationParticipantB")
+  messages             Message[]
+  appointments         ViewingAppointment[]   @relation("AppointmentRequester")
+  managedAppointments  ViewingAppointment[]   @relation("AppointmentManager")
+  reports              Report[]
+  reviewsWritten       Review[]               @relation("ReviewsWritten")
+  reviewsReceived      Review[]               @relation("UserReviewsReceived")
+  supportTickets       SupportTicket[]        @relation("TicketReporter")
+  assignedTickets      SupportTicket[]        @relation("TicketAssignee")
+  ticketsAgainst       SupportTicket[]        @relation("TicketTargetUser")
+  ticketMessages       TicketMessage[]
+  moderationCases      ModerationCase[]       @relation("CaseModerator")
+  notifications        Notification[]
+  emailVerificationTokens EmailVerificationToken[]
+  auditLogs            AuditLog[]
+  promotions           Promotion[]            @relation("PromotionCreator")
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  fullName     String
+  phone        String?
+  avatarUrl    String?
+  bio          String?
+  preferredLang String  @default("ar")
+  city         String?
+  companyName  String?
+  responseTimeMins Int?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationProfile {
+  id           String             @id @default(cuid())
+  userId       String             @unique
+  legalName    String
+  nationalId   String?
+  businessId   String?
+  documentUrl  String?
+  status       VerificationStatus @default(PENDING)
+  reviewedAt   DateTime?
+  reviewedById String?
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Property {
+  id             String       @id @default(cuid())
+  ownerId        String
+  title          String
+  propertyType   PropertyType
+  wilaya         String
+  commune        String
+  neighborhood   String
+  addressHint    String
+  latitude       Float
+  longitude      Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  owner          User         @relation("OwnedProperties", fields: [ownerId], references: [id])
+  listings       Listing[]
+}
+
+model Listing {
+  id                  String             @id @default(cuid())
+  propertyId          String
+  ownerId             String
+  agentId             String?
+  title               String
+  slug                String             @unique
+  description         String
+  priceDzd            Int
+  transactionType     TransactionType
+  propertyType        PropertyType
+  wilaya              String
+  commune             String
+  neighborhood        String
+  addressHint         String
+  bedrooms            Int
+  bathrooms           Int
+  areaM2              Float
+  floor               Int?
+  parking             Boolean            @default(false)
+  furnished           Boolean            @default(false)
+  availabilityDate    DateTime?
+  verificationStatus  VerificationStatus @default(PENDING)
+  status              ListingStatus      @default(DRAFT)
+  approvedAt          DateTime?
+  approvedById        String?
+  rejectionReason     String?
+  viewsCount          Int                @default(0)
+  leadsCount          Int                @default(0)
+  responseTimeMins    Int?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  property            Property           @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  owner               User               @relation("OwnerListings", fields: [ownerId], references: [id], onDelete: Cascade)
+  agent               User?              @relation("AgentListings", fields: [agentId], references: [id])
+  media               Media[]
+  documents           Document[]
+  amenities           Amenity[]
+  savedBy             SavedListing[]
+  leads               Lead[]
+  conversations       Conversation[]
+  appointments        ViewingAppointment[]
+  reports             Report[]
+  reviews             Review[]
+  moderationCases     ModerationCase[]
+  promotions          Promotion[]
+}
+
+model Media {
+  id          String   @id @default(cuid())
+  listingId   String
+  url         String
+  alt         String?
+  isCover     Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  listingId   String
+  name        String
+  url         String
+  type        String
+  createdAt   DateTime @default(now())
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Amenity {
+  id          String   @id @default(cuid())
+  listingId   String
+  name        String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model SavedListing {
+  id          String   @id @default(cuid())
+  userId      String
+  listingId   String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+}
+
+model SavedSearch {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  filters       Json
+  notifyByEmail Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  userId      String?
+  listingId   String
+  name        String
+  email       String
+  phone       String?
+  message     String
+  status      String   @default("NEW")
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id              String    @id @default(cuid())
+  listingId        String?
+  participantAId   String
+  participantBId   String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  listing          Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  participantA     User     @relation("ConversationParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantB     User     @relation("ConversationParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  messages         Message[]
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  conversationId  String
+  senderId        String
+  content         String
+  createdAt       DateTime     @default(now())
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model ViewingAppointment {
+  id              String            @id @default(cuid())
+  listingId       String
+  requesterId     String
+  managerId       String?
+  requestedAt     DateTime
+  note            String?
+  status          AppointmentStatus @default(REQUESTED)
+  createdAt       DateTime          @default(now())
+  listing         Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  requester       User              @relation("AppointmentRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  manager         User?             @relation("AppointmentManager", fields: [managerId], references: [id])
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  listingId    String
+  reporterId   String?
+  reason       String
+  details      String?
+  status       ReportStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  listing      Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reporter     User?        @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+}
+
+model Review {
+  id             String           @id @default(cuid())
+  reviewerId     String
+  listingId      String?
+  targetUserId   String?
+  targetType     ReviewTargetType
+  rating         Int
+  title          String?
+  comment        String
+  isPublic       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  reviewer       User             @relation("ReviewsWritten", fields: [reviewerId], references: [id], onDelete: Cascade)
+  listing        Listing?         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  targetUser     User?            @relation("UserReviewsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([targetUserId])
+}
+
+model SupportTicket {
+  id           String          @id @default(cuid())
+  reporterId   String
+  listingId    String?
+  targetUserId String?
+  assignedToId String?
+  subject      String
+  category     String
+  description  String
+  priority     TicketPriority  @default(NORMAL)
+  status       TicketStatus    @default(OPEN)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  reporter     User            @relation("TicketReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser   User?           @relation("TicketTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  assignedTo   User?           @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages     TicketMessage[]
+
+  @@index([reporterId])
+  @@index([status])
+}
+
+model TicketMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  senderId  String
+  message   String
+  createdAt DateTime      @default(now())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model ModerationCase {
+  id            String             @id @default(cuid())
+  listingId      String?
+  reportId       String?
+  moderatorId    String?
+  status         VerificationStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  listing        Listing?           @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  moderator      User?              @relation("CaseModerator", fields: [moderatorId], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  body        String
+  type        String
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailVerificationToken {
+  id          String    @id @default(cuid())
+  userId      String
+  email       String
+  tokenHash   String    @unique
+  type        String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String
+  priceDzd    Int
+  features    Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Promotion {
+  id            String   @id @default(cuid())
+  listingId      String
+  createdById    String
+  name          String
+  budgetDzd     Int
+  startsAt      DateTime
+  endsAt        DateTime
+  listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("PromotionCreator", fields: [createdById], references: [id], onDelete: Cascade)
+}
