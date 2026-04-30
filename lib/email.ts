@@ -43,7 +43,7 @@ export async function sendVerificationEmail(email: string, token: string) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? "Darak <noreply@darak.local>",
+        from: process.env.EMAIL_FROM || "Darak <onboarding@resend.dev>",
         to: email,
         subject: "Verify your Darak account",
         html: `
